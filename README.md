@@ -49,6 +49,11 @@ xmanager==0.2.0
 python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr -std_coef=1.645 -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=60 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/mean_std -n_step=5
 ```
 
+#### Hedging frequency parameter added (hed_frq=0.5: hedge twice a day)
+```
+python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr-gl -std_coef=1.645 -hed_frq=0.5 -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/meanstd -n_step=5
+```
+
 ### Evaluate a Baseline Agent
 ```console
 python greek_run.py -spread=0.02 -gbm=True -eval_sim=5000 -strategy=gamma -init_vol=0.3 -mu=0.0 -vov=0.3 -hed_ttm=30 -liab_ttms=60 -init_ttm=30 -poisson_rate=1.0 -vega_obs=False -logger_prefix=batch1/Table2/TC20/Baseline/vega
