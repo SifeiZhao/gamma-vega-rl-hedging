@@ -31,6 +31,7 @@ flags.DEFINE_string('logger_prefix', '', 'Prefix folder for logger (Default None
 flags.DEFINE_boolean('vega_obs', False, 'Include portfolio vega and hedging option vega in state variables (Default False)')
 flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
+flags.DEFINE_float('hed_frq', 1.0, 'Hedging frequency (Default 1.0)')
 
 def make_logger(work_folder, label, terminal=False):
     loggers = [
@@ -58,11 +59,12 @@ def make_environment(utils, logger = None) -> dm_env.Environment:
 def main(argv):
     gamma_hedge_ratio = 1.0
     
-    work_folder = f'greekhedge_spread={FLAGS.spread}_v={FLAGS.vov}_hedttm={FLAGS.hed_ttm}'
+    work_folder = f'greekhedge_spread={FLAGS.spread}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}'
     if FLAGS.logger_prefix:
         work_folder = FLAGS.logger_prefix + "/" + work_folder
     # Create an environment, grab the spec, and use it to create networks.
     eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=4321, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
+                       frq=FLAGS.hed_frq,
                        init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                        moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                        mu=FLAGS.mu, ttms=[int(ttm) for ttm in FLAGS.liab_ttms])
