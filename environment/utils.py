@@ -86,7 +86,7 @@ class Utils:
         self.feed_data = feed_data
 
         # FX data
-        self.fx_vol_roll = fx_vol_roll # rolling historical vol size (in # of data points)
+        self.fx_vol_roll = fx_vol_roll # rolling historical vol size (in days)
         self.fx_frq = fx_frq # daily hedging times
         
         # set the np random seed
@@ -287,6 +287,7 @@ class Utils:
         implied_vol = rolled_data_array[:, 1, :] / 100
 
         return a_price, implied_vol
+    
     def get_real_path_fx(self):
         market_price = pd.read_excel('environment/data/EURUSD.xlsx')
         
@@ -298,12 +299,13 @@ class Utils:
         window_size = self.init_ttm * 24
         step_size = int(24 / self.fx_frq)
         
-        market_realized_vol = market_price['Close'].rolling(window=self.fx_vol_roll).std()
+        market_realized_vol = market_price['Close'].rolling(window=self.fx_vol_roll*24).std()
         market_realized_vol = pd.DataFrame(market_realized_vol)
         market_realized_vol = market_realized_vol.rename(columns={'Close':'Close_vol'})
         market_realized_vol.index = market_price['Date'] 
         
         merged_df = pd.merge(market_price[['Date','Close']], market_realized_vol, left_on='Date', right_index=True)
+        merged_df = merged_df.dropna(how='any')
         merged_df = merged_df.rename(columns={'Close':'Close_price'})
         
         result_arrays = []
