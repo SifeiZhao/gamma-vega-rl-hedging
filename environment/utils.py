@@ -252,10 +252,12 @@ class Utils:
 
     def get_real_path(self):
         market_price = pd.read_excel('environment/data/SPX_index.xlsx')
+        market_price = market_price[(market_price['Date'].dt.time >= pd.to_datetime('09:00').time()) & 
+                                (market_price['Date'].dt.time <= pd.to_datetime('15:00').time())]
 
         market_vol = pd.read_excel('environment/data/VIX_index.xlsx')
         market_vol = market_vol[(market_vol['Date'].dt.time >= pd.to_datetime('09:00').time()) & 
-                                (market_vol['Date'].dt.time <= pd.to_datetime('16:00').time())]
+                                (market_vol['Date'].dt.time <= pd.to_datetime('15:00').time())]
         
         market_price['Date'] = pd.to_datetime(market_price['Date'])
         market_vol['Date'] = pd.to_datetime(market_vol['Date'])
@@ -265,8 +267,7 @@ class Utils:
 
         merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
         merged_df = np.array(merged_df[['Close_price', 'Close_vol']].T)
-        merged_df = merged_df.sort_values('Date')
-        
+
         window_size = self.init_ttm * self.frq
         step_size = int(6 / self.frq)
         self.num_sim = merged_df.shape[1] - window_size + 1   
