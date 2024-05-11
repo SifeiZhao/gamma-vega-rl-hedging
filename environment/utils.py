@@ -30,6 +30,7 @@ class Utils:
                  poisson_rate=1, moneyness_mean=1.0, moneyness_std=0.0, ttms=None, 
                  num_conts_to_add = -1, contract_size = 100,
                  action_low=0, action_high=3, kappa = 0.0, svj_rho = -0.1, mu_s=0.2, sigma_sq_s=0.1, lambda_d=0.2, 
+                 fx_vol_roll = 10, fx_frq = 24,
                  gbm = False, sabr=False, feed_data=False):
         if ttms is None:
             # ttms = [60, 120, 240, 480]
@@ -84,6 +85,10 @@ class Utils:
         # Feed real data into trained model for evaluation
         self.feed_data = feed_data
 
+        # FX data
+        self.fx_vol_roll = fx_vol_roll # rolling historical vol size (in # of data points)
+        self.fx_frq = fx_frq # daily hedging times
+        
         # set the np random seed
         np.random.seed(np_seed)
         self.seed = np_seed
@@ -282,7 +287,37 @@ class Utils:
         implied_vol = rolled_data_array[:, 1, :] / 100
 
         return a_price, implied_vol
+    def get_real_path_fx(self):
+        market_price = pd.read_excel('environment/data/EURUSD.xlsx')
+        
+        market_price['Date'] = pd.to_datetime(market_price['Date'])
+        market_price['Date'] = market_price['Date'].dt.strftime('%Y-%m-%d %H')
+        market_price = market_price.sort_values('Date')
+        
+        # 24 trading hours
+        window_size = self.init_ttm * 24
+        step_size = int(24 / self.fx_frq)
+        
+        market_realized_vol = market_price['Close'].rolling(window=self.fx_vol_roll).std()
+        market_realized_vol = pd.DataFrame(market_realized_vol)
+        market_realized_vol = market_realized_vol.rename(columns={'Close':'Close_vol'})
+        market_realized_vol.index = market_price['Date'] 
+        
+        merged_df = pd.merge(market_price[['Date','Close']], market_realized_vol, left_on='Date', right_index=True)
+        merged_df = merged_df.rename(columns={'Close':'Close_price'})
+        
+        result_arrays = []
+        for start in range(len(merged_df) - window_size + 1):
+            window = merged_df.iloc[start:start + window_size, 1:] 
+            sub_window = window[::step_size]
+            result_arrays.append(sub_window.values)  
+        
+        result_matrix = np.array(result_arrays)
 
+        a_price = result_matrix[:, :, 0]  
+        implied_vol = result_matrix[:, :, 1] / 100
+        return a_price, implied_vol
+    
     def init_env(self):
         """Initialize environment
         Entrypoint to simulate market dynamics: 
