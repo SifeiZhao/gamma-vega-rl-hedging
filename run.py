@@ -58,6 +58,7 @@ flags.DEFINE_integer('eval_seed', 1234, 'Evaluation Seed (Default 1234)')
 flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
 flags.DEFINE_float('hed_frq', 1.0, 'Hedging frequency (Default 1.0)')
+flags.DEFINE_boolean('feed_data', False, 'Feed real data into trained model for evaluation (Default False)')
 
 def make_logger(work_folder, label, terminal=False):
     loggers = [
@@ -222,12 +223,13 @@ def main(argv):
       from agent.agent import D4PG
 
     # work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_hedttm={FLAGS.hed_ttm}_elastic_reward_k={FLAGS.elastic_reward_k}'
-    work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}'
+    work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}_feeddata={FLAGS.feed_data}'
     if FLAGS.logger_prefix:
         work_folder = FLAGS.logger_prefix + "/" + work_folder
     # Create an environment, grab the spec, and use it to create networks.
-    utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=1234, num_sim=FLAGS.train_sim, spread=FLAGS.spread, volvol=FLAGS.vov, sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
-                  frq=FLAGS.hed_frq,
+    utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=1234, num_sim=FLAGS.train_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
+                  sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
+                  frq=FLAGS.hed_frq, feed_data=False,
                   init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                   moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                   mu=FLAGS.mu, ttms=[int(ttm) for ttm in FLAGS.liab_ttms],
@@ -288,8 +290,9 @@ def main(argv):
 
     # Create the evaluation actor and loop.
     eval_actor = actors.FeedForwardActor(policy_network=eval_policy)
-    eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=FLAGS.eval_seed, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
-                       frq=FLAGS.hed_frq,
+    eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=FLAGS.eval_seed, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
+                       sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
+                       frq=FLAGS.hed_frq, feed_data=FLAGS.feed_data,
                        init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                        moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                        mu=0.0, ttms=[int(ttm) for ttm in FLAGS.liab_ttms],
