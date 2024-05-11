@@ -30,7 +30,7 @@ class Utils:
                  poisson_rate=1, moneyness_mean=1.0, moneyness_std=0.0, ttms=None, 
                  num_conts_to_add = -1, contract_size = 100,
                  action_low=0, action_high=3, kappa = 0.0, svj_rho = -0.1, mu_s=0.2, sigma_sq_s=0.1, lambda_d=0.2, 
-                 gbm = False, sabr=False, feed_data=False):
+                 gbm = False, sabr=False, feed_data=False, day_freq=7):
         if ttms is None:
             # ttms = [60, 120, 240, 480]
             ttms = [120]   # single ttm
@@ -83,6 +83,7 @@ class Utils:
         self.sabr = sabr
         # Feed real data into trained model for evaluation
         self.feed_data = feed_data
+        self.day_freq = day_freq
 
         # set the np random seed
         np.random.seed(np_seed)
@@ -250,7 +251,7 @@ class Utils:
         self.implied_vol = implied_vol
         return a_price, implied_vol
 
-    def get_real_path(self):
+    def get_real_path(self, day_freq=7):
         market_price = pd.read_excel('environment/data/SPX_index.xlsx')
 
         market_vol = pd.read_excel('environment/data/VIX_index.xlsx')
@@ -264,9 +265,21 @@ class Utils:
         market_vol['Date'] = market_vol['Date'].dt.strftime('%Y-%m-%d %H')
 
         merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
+        merged_df = merged_df.sort_values('Date')
 
-        a_price = merged_df['Close_price'].values.reshape(1, -1)
-        implied_vol = merged_df['Close_vol'].values.reshape(1, -1) / 100
+        result_arrays = []
+        window_size = 30*7 # trading hour 9-15, 7 hours
+        step = int(7/day_freq) # daily hedging times = step
+
+        for start in range(len(merged_df) - window_size + 1):
+            window = merged_df.iloc[start:start + window_size, 1:] 
+            sub_window = window[::step]
+            result_arrays.append(sub_window.values)  
+        
+        result_matrix = np.array(result_arrays)
+
+        a_price = result_matrix[:, :, 0]  
+        implied_vol = result_matrix[:, :, 1] / 100
 
         return a_price, implied_vol
 
