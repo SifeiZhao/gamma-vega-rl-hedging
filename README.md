@@ -46,7 +46,7 @@ xmanager==0.2.0
 ## Sample Runs
 
 #### Hedging frequency parameter added (hed_frq=2: hedge twice a day)
-#### Feed_data parameter added (feed_data=True: feed data into trained model for evaluation)
+#### feed_data parameter added (feed_data=True: feed data into trained model for evaluation)
 
 ### 1. Train & Evaluate the Reinforcement Learning Agent
 
@@ -55,14 +55,14 @@ xmanager==0.2.0
 python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -critic=qr-gl -std_coef=1.645 -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/meanstd -n_step=5
 ```
 
-##### RL, feed_data=False (eval_sim needed) gbm, hed_frq=6
+##### RL, feed_data=False (eval_sim needed), gbm, hed_frq=6
 ```
 python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr-gl -std_coef=1.645 -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/meanstd -n_step=5
 ```
 
 ### 2. Evaluate a Baseline Agent
 
-##### Delta, feed_data=True, liab_ttms=5, hed_frq=6
+##### Delta, feed_data=True, gbm, liab_ttms=5, hed_frq=6
 ```
 python greek_run.py -spread=0.005 -gbm=True -strategy=delta -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -vega_obs=False -logger_prefix=batch1/Table1/TC05/Baseline/delta
 ```
