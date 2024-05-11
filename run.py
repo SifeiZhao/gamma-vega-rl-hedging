@@ -57,7 +57,7 @@ flags.DEFINE_boolean('vega_obs', False, 'Include portfolio vega and hedging opti
 flags.DEFINE_integer('eval_seed', 1234, 'Evaluation Seed (Default 1234)')
 flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
-flags.DEFINE_float('hed_frq', 1.0, 'Hedging frequency (Default 1.0)')
+flags.DEFINE_integer('hed_frq', 1, 'Hedging frequency (Default 1): i.e. hed_frq=2 means hedging twice a day')
 flags.DEFINE_boolean('feed_data', False, 'Feed real data into trained model for evaluation (Default False)')
 
 def make_logger(work_folder, label, terminal=False):
@@ -287,7 +287,6 @@ def main(argv):
             agent_networks['policy'],
         ])
 
-
     # Create the evaluation actor and loop.
     eval_actor = actors.FeedForwardActor(policy_network=eval_policy)
     eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=FLAGS.eval_seed, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
@@ -299,7 +298,11 @@ def main(argv):
                        action_low=float(FLAGS.action_space[0]), action_high=float(FLAGS.action_space[1]))
     eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder,'eval_env'))
     eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=loggers['eval_loop'])
-    eval_loop.run(num_episodes=FLAGS.eval_sim)   
+    if FLAGS.feed_data:
+            eval_loop.run(num_episodes=eval_utils.num_sim)   # the number of paths when feed_data=True
+    elif not FLAGS.feed_data:
+        eval_loop.run(num_episodes=FLAGS.eval_sim)
+
     
     Path(f'./logs/{work_folder}/ok').touch()
 

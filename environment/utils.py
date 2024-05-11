@@ -25,7 +25,7 @@ random.seed(1)
 
 class Utils:
     def __init__(self, init_ttm, np_seed, num_sim, mu=0.0, init_vol=0.2, 
-                 s=10, k=10, r=0, q=0, t=252, frq=1, spread=0,
+                 s=4500, k=4500, r=0, q=0, t=252, frq=1, spread=0,
                  hed_ttm=60, beta=1, rho=-0.7, volvol=0.6, ds=0.001, 
                  poisson_rate=1, moneyness_mean=1.0, moneyness_std=0.0, ttms=None, 
                  num_conts_to_add = -1, contract_size = 100,
@@ -48,15 +48,15 @@ class Utils:
         self.q = q
         # Annual Trading Day
         self.T = t
-        # frequency of trading
+        # frequency of trading (i.e. frq=2 means trading twice a day)
         self.frq = frq
-        self.dt = self.frq / self.T
+        self.dt = 1 / self.frq / self.T
         # Number of simulations
         self.num_sim = num_sim
         # Initial time to maturity
         self.init_ttm = init_ttm
         # Number of periods
-        self.num_period = int(self.init_ttm / self.frq)
+        self.num_period = int(self.init_ttm * self.frq)
         # Time to maturity for hedging options
         self.hed_ttm = hed_ttm
         # Add Option Moneyness mean, std
@@ -239,7 +239,7 @@ class Utils:
         a_price, sabr_vol = self._sabr_sim()
 
         # time to maturity "rank 1" array: e.g. [M, M-1, ..., 0]
-        ttm = np.arange(self.init_ttm, -self.frq, -self.frq, dtype=np.int16)
+        ttm = np.arange(self.init_ttm, -1/self.frq, -1/self.frq, dtype=float)
 
         # BS price 2-d array and bs delta 2-d array
         print("Generating implied vol")
@@ -264,9 +264,20 @@ class Utils:
         market_vol['Date'] = market_vol['Date'].dt.strftime('%Y-%m-%d %H')
 
         merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
+        merged_df = np.array(merged_df[['Close_price', 'Close_vol']].T)
 
-        a_price = merged_df['Close_price'].values.reshape(1, -1)
-        implied_vol = merged_df['Close_vol'].values.reshape(1, -1) / 100
+        window_size = self.init_ttm * self.frq
+        step_size = int(6 / self.frq)
+        self.num_sim = merged_df.shape[1] - window_size + 1   
+
+        rolled_data = []
+        for i in range(self.num_sim):
+            window_data = merged_df[:, i:i+window_size:step_size]
+            rolled_data.append(window_data)
+        
+        rolled_data_array = np.array(rolled_data)
+        a_price = rolled_data_array[:, 0, :]
+        implied_vol = rolled_data_array[:, 1, :] / 100
 
         return a_price, implied_vol
 

@@ -31,7 +31,7 @@ flags.DEFINE_string('logger_prefix', '', 'Prefix folder for logger (Default None
 flags.DEFINE_boolean('vega_obs', False, 'Include portfolio vega and hedging option vega in state variables (Default False)')
 flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
-flags.DEFINE_float('hed_frq', 1.0, 'Hedging frequency (Default 1.0)')
+flags.DEFINE_integer('hed_frq', 1, 'Hedging frequency (Default 1): i.e. hed_frq=2 means hedging twice a day')
 flags.DEFINE_boolean('feed_data', False, 'Feed real data into trained model for evaluation (Default False)')
 
 def make_logger(work_folder, label, terminal=False):
@@ -77,29 +77,23 @@ def main(argv):
         eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder, f'eval_gamma_env'))
         eval_actor = GammaHedgeAgent(eval_env, gamma_hedge_ratio)
         eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=make_logger(work_folder, f'eval_gamma_loop',True))
-        eval_loop.run(num_episodes=FLAGS.eval_sim)
-        if FLAGS.feed_data:
-            eval_loop.run(num_episodes=1)   
-        elif not FLAGS.feed_data:
-            eval_loop.run(num_episodes=FLAGS.eval_sim)
+        
     elif FLAGS.strategy == 'delta':
         # delta hedging
         eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder, 'eval_delta_env'))
         eval_actor = DeltaHedgeAgent(eval_env, gamma_hedge_ratio)
         eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=make_logger(work_folder, 'eval_delta_loop', True))
-        if FLAGS.feed_data:
-            eval_loop.run(num_episodes=1)   
-        elif not FLAGS.feed_data:
-            eval_loop.run(num_episodes=FLAGS.eval_sim)
+        
     elif FLAGS.strategy == 'vega':
         # vega hedging
         eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder, 'eval_vega_env'))
         eval_actor = VegaHedgeAgent(eval_env)
         eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=make_logger(work_folder, 'eval_vega_loop', True))
-        if FLAGS.feed_data:
-            eval_loop.run(num_episodes=1)   
-        elif not FLAGS.feed_data:
-            eval_loop.run(num_episodes=FLAGS.eval_sim)
+
+    if FLAGS.feed_data:
+        eval_loop.run(num_episodes=eval_utils.num_sim)   # the number of paths when feed_data=True
+    elif not FLAGS.feed_data:
+        eval_loop.run(num_episodes=FLAGS.eval_sim)
 
     Path(f'./logs/{work_folder}/ok').touch()
 
