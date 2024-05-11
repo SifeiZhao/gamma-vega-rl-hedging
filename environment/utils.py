@@ -268,7 +268,7 @@ class Utils:
         merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
         merged_df = np.array(merged_df[['Close_price', 'Close_vol']].T)
 
-        window_size = self.init_ttm * self.frq
+        window_size = self.init_ttm * 6  # 6 real data per day
         step_size = int(6 / self.frq)
         self.num_sim = merged_df.shape[1] - window_size + 1   
 
