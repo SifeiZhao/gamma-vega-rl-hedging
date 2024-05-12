@@ -59,6 +59,7 @@ flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
 flags.DEFINE_integer('hed_frq', 1, 'Hedging frequency (Default 1): i.e. hed_frq=2 means hedging twice a day')
 flags.DEFINE_boolean('feed_data', False, 'Feed real data into trained model for evaluation (Default False)')
+flags.DEFINE_boolean('feed_data_fx', False, 'Feed real fx data into trained model for evaluation (Default False)')
 
 def make_logger(work_folder, label, terminal=False):
     loggers = [
@@ -223,13 +224,16 @@ def main(argv):
       from agent.agent import D4PG
 
     # work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_hedttm={FLAGS.hed_ttm}_elastic_reward_k={FLAGS.elastic_reward_k}'
-    work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}_feeddata={FLAGS.feed_data}'
+    if FLAGS.feed_data:
+        work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}_feeddata={FLAGS.feed_data}'
+    if FLAGS.feed_data_fx:
+        work_folder = f'spread={FLAGS.spread}_obj={FLAGS.obj_func}_threshold={FLAGS.threshold}_critic={FLAGS.critic}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}_feeddatafx={FLAGS.feed_datafx}'
     if FLAGS.logger_prefix:
         work_folder = FLAGS.logger_prefix + "/" + work_folder
     # Create an environment, grab the spec, and use it to create networks.
     utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=1234, num_sim=FLAGS.train_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
                   sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
-                  frq=FLAGS.hed_frq, feed_data=False,
+                  frq=FLAGS.hed_frq, feed_data=False, feed_data_fx=False,
                   init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                   moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                   mu=FLAGS.mu, ttms=[int(ttm) for ttm in FLAGS.liab_ttms],
@@ -291,16 +295,16 @@ def main(argv):
     eval_actor = actors.FeedForwardActor(policy_network=eval_policy)
     eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=FLAGS.eval_seed, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
                        sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
-                       frq=FLAGS.hed_frq, feed_data=FLAGS.feed_data,
+                       frq=FLAGS.hed_frq, feed_data=FLAGS.feed_data, feed_data_fx=FLAGS.feed_data_fx,
                        init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                        moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                        mu=0.0, ttms=[int(ttm) for ttm in FLAGS.liab_ttms],
                        action_low=float(FLAGS.action_space[0]), action_high=float(FLAGS.action_space[1]))
     eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder,'eval_env'))
     eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=loggers['eval_loop'])
-    if FLAGS.feed_data:
-            eval_loop.run(num_episodes=eval_utils.num_sim)   # the number of paths when feed_data=True
-    elif not FLAGS.feed_data:
+    if (FLAGS.feed_data) or (FLAGS.feed_data_fx):
+            eval_loop.run(num_episodes=eval_utils.num_sim)   # the number of paths when feed_data=True or feed_data_fx=True
+    elif (not FLAGS.feed_data) and (not FLAGS.feed_data_fx) :
         eval_loop.run(num_episodes=FLAGS.eval_sim)
 
     

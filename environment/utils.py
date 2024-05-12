@@ -31,7 +31,7 @@ class Utils:
                  num_conts_to_add = -1, contract_size = 100,
                  action_low=0, action_high=3, kappa = 0.0, svj_rho = -0.1, mu_s=0.2, sigma_sq_s=0.1, lambda_d=0.2, 
                  fx_vol_roll = 10, fx_frq = 24,
-                 gbm = False, sabr=False, feed_data=False):
+                 gbm = False, sabr=False, feed_data=False, feed_data_fx=False):
         if ttms is None:
             # ttms = [60, 120, 240, 480]
             ttms = [120]   # single ttm
@@ -86,6 +86,7 @@ class Utils:
         self.feed_data = feed_data
 
         # FX data
+        self.feed_data_fx = feed_data_fx
         self.fx_vol_roll = fx_vol_roll # rolling historical vol size (in days)
         self.fx_frq = fx_frq # daily hedging times
         
@@ -336,6 +337,8 @@ class Utils:
         """
         if self.feed_data:
             return self.get_real_path()
+        elif self.feed_data_fx:
+            return self.get_real_path_fx()
         elif self.sabr:
             return self.get_sim_path_sabr()
         elif self.gbm:
