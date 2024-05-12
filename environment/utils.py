@@ -271,9 +271,8 @@ class Utils:
         market_price['Date'] = market_price['Date'].dt.strftime('%Y-%m-%d %H')
         market_vol['Date'] = market_vol['Date'].dt.strftime('%Y-%m-%d %H')
 
-        merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
+        merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol')).sort_values('Date')
         merged_df = np.array(merged_df[['Close_price', 'Close_vol']].T)
-        merged_df = merged_df.sort_values('Date')
 
         window_size = self.init_ttm * 6  # 6 real data per day
         step_size = int(6 / self.frq)
