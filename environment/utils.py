@@ -39,6 +39,12 @@ class Utils:
         self.mu = mu
         # Annual Volatility
         self.init_vol = init_vol
+        if feed_data:
+            s = 4500
+            k = 4500
+        if feed_data_fx:
+            s = 1.08
+            k = 1.08
         # Initial Asset Value
         self.S = s
         # Option Strike Price
