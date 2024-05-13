@@ -252,6 +252,8 @@ class Utils:
 
         # time to maturity "rank 1" array: e.g. [M, M-1, ..., 0]
         ttm = np.arange(self.init_ttm, -1/self.frq, -1/self.frq, dtype=float)
+        if self.frq > 1:
+            ttm = ttm[:-1]
 
         # BS price 2-d array and bs delta 2-d array
         print("Generating implied vol")
