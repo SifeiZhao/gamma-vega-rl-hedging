@@ -58,7 +58,7 @@ flags.DEFINE_integer('eval_seed', 1234, 'Evaluation Seed (Default 1234)')
 flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
 flags.DEFINE_integer('hed_frq', 1, 'Hedging frequency (Default 1): i.e. hed_frq=2 means hedging twice a day')
-flags.DEFINE_boolean('feed_data', False, 'Feed real data into trained model for evaluation (Default False)')
+flags.DEFINE_boolean('feed_data', False, 'Feed real SPX data into trained model for evaluation (Default False)')
 flags.DEFINE_boolean('feed_data_fx', False, 'Feed real fx data into trained model for evaluation (Default False)')
 
 def make_logger(work_folder, label, terminal=False):

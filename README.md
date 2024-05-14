@@ -44,20 +44,55 @@ xmanager==0.2.0
 ```
 
 ## Sample Runs
-### Train & Evaluate the Reinforcement Learning Agent
-```console
-python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr -std_coef=1.645 -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=60 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/mean_std -n_step=5
+
+#### Hedging frequency parameter added (hed_frq=2: hedge twice a day)
+#### feed_data parameter added (feed_data=True: feed data into trained model for evaluation)
+
+### 1. Train & Evaluate the Reinforcement Learning Agent
+
+##### RL, gbm, feed_data=True, hed_frq=6
+```
+python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -critic=qr-gl -std_coef=1.645 -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/meanstd -n_step=5
 ```
 
-#### Hedging frequency parameter added (hed_frq=0.5: hedge twice a day)
+##### RL, gbm, feed_data=False (eval_sim needed), hed_frq=6
 ```
-python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr-gl -std_coef=1.645 -hed_frq=0.5 -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/meanstd -n_step=5
+python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr-gl -std_coef=1.645 -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=False -gbm=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table1/TC05/RL/meanstd -n_step=5
 ```
 
-### Evaluate a Baseline Agent
-```console
-python greek_run.py -spread=0.02 -gbm=True -eval_sim=5000 -strategy=gamma -init_vol=0.3 -mu=0.0 -vov=0.3 -hed_ttm=30 -liab_ttms=60 -init_ttm=30 -poisson_rate=1.0 -vega_obs=False -logger_prefix=batch1/Table2/TC20/Baseline/vega
+##### RL, sabr, feed_data=True, hed_frq=6
 ```
+python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -critic=qr-gl -std_coef=1.645 -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=True -sabr=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table3/TC05/RL/meanstd -n_step=5
+```
+
+##### RL, sabr, feed_data=False (eval_sim needed), hed_frq=6
+```
+python run.py -spread=0.005 -obj_func=meanstd -train_sim=40000 -eval_sim=5000 -critic=qr-gl -std_coef=1.645 -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -vega_obs=True -sabr=True -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -action_space=0,1 -logger_prefix=batch1/Table3/TC05/RL/meanstd -n_step=5
+```
+
+### 2. Evaluate a Baseline Agent
+
+##### Delta, gbm, feed_data=True, liab_ttms=5, hed_frq=6
+```
+python greek_run.py -spread=0.005 -gbm=True -strategy=delta -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.0 -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -vega_obs=False -logger_prefix=batch1/Table1/TC05/Baseline/delta
+```
+
+##### Delta_Vega, gbm, feed_data=False (eval_sim needed), liab_ttms=5, hed_frq=6
+```
+python greek_run.py -spread=0.005 -gbm=True -eval_sim=5000 -strategy=vega -hed_frq=6 -feed_data=False -init_vol=0.3 -mu=0.0 -vov=0.3 -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -vega_obs=True -logger_prefix=batch1/Table3/TC05/Baseline/vega
+```
+
+##### Delta, sabr, feed_data=True, liab_ttms=5, hed_frq=6
+```
+python greek_run.py -spread=0.005 -sabr=True -strategy=delta -hed_frq=6 -feed_data=True -init_vol=0.3 -mu=0.0 -vov=0.3 -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -vega_obs=True -logger_prefix=batch1/Table3/TC05/Baseline/delta
+```
+
+##### Delta_Vega, sabr, feed_data=False (eval_sim needed), liab_ttms=5, hed_frq=6
+```
+python greek_run.py -spread=0.005 -sabr=True -eval_sim=5000 -strategy=vega -hed_frq=6 -feed_data=False -init_vol=0.3 -mu=0.0 -vov=0.3 -hed_ttm=30 -liab_ttms=5 -init_ttm=30 -poisson_rate=1.0 -vega_obs=True -logger_prefix=batch1/Table3/TC05/Baseline/vega
+```
+
+
 
 ## Result Log Files
 

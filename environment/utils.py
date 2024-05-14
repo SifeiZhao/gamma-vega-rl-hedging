@@ -25,7 +25,7 @@ random.seed(1)
 
 class Utils:
     def __init__(self, init_ttm, np_seed, num_sim, mu=0.0, init_vol=0.2, 
-                 s=1.0748, k=1.0748, r=0, q=0, t=252, frq=1, spread=0,
+                 s=4500, k=4500, r=0, q=0, t=252, frq=1, spread=0,
                  hed_ttm=60, beta=1, rho=-0.7, volvol=0.6, ds=0.001, 
                  poisson_rate=1, moneyness_mean=1.0, moneyness_std=0.0, ttms=None, 
                  num_conts_to_add = -1, contract_size = 100,
@@ -39,6 +39,12 @@ class Utils:
         self.mu = mu
         # Annual Volatility
         self.init_vol = init_vol
+        if feed_data:
+            s = 4500
+            k = 4500
+        if feed_data_fx:
+            s = 1.08
+            k = 1.08
         # Initial Asset Value
         self.S = s
         # Option Strike Price
@@ -246,6 +252,9 @@ class Utils:
 
         # time to maturity "rank 1" array: e.g. [M, M-1, ..., 0]
         ttm = np.arange(self.init_ttm, -1/self.frq, -1/self.frq, dtype=float)
+        
+        if len(ttm) != self.frq*self.init_ttm + 1:
+            ttm = ttm[:-1]
 
         # BS price 2-d array and bs delta 2-d array
         print("Generating implied vol")
@@ -271,9 +280,8 @@ class Utils:
         market_price['Date'] = market_price['Date'].dt.strftime('%Y-%m-%d %H')
         market_vol['Date'] = market_vol['Date'].dt.strftime('%Y-%m-%d %H')
 
-        merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
+        merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol')).sort_values('Date')
         merged_df = np.array(merged_df[['Close_price', 'Close_vol']].T)
-        merged_df = merged_df.sort_values('Date')
 
         window_size = self.init_ttm * 6  # 6 real data per day
         step_size = int(6 / self.frq)
