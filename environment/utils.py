@@ -252,6 +252,7 @@ class Utils:
 
         # time to maturity "rank 1" array: e.g. [M, M-1, ..., 0]
         ttm = np.arange(self.init_ttm, -1/self.frq, -1/self.frq, dtype=float)
+        
         if len(ttm) != self.frq*self.init_ttm + 1:
             ttm = ttm[:-1]
 

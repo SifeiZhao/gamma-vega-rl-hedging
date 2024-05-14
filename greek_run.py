@@ -69,7 +69,7 @@ def main(argv):
     # Create an environment, grab the spec, and use it to create networks.
     eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=4321, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
                        sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
-                       frq=FLAGS.hed_frq, feed_data=FLAGS.feed_data, feed_data_fx=FLAGS.feed_data_fx,
+                       frq=FLAGS.hed_frq, feed_data=FLAGS.feed_data, fx_frq=FLAGS.hed_frq, feed_data_fx=FLAGS.feed_data_fx,
                        init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                        moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                        mu=FLAGS.mu, ttms=[int(ttm) for ttm in FLAGS.liab_ttms])
