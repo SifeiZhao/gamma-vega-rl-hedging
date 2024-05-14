@@ -25,12 +25,13 @@ random.seed(1)
 
 class Utils:
     def __init__(self, init_ttm, np_seed, num_sim, mu=0.0, init_vol=0.2, 
-                 s=10, k=10, r=0, q=0, t=252, frq=1, spread=0,
+                 s=1.0748, k=1.0748, r=0, q=0, t=252, frq=1, spread=0,
                  hed_ttm=60, beta=1, rho=-0.7, volvol=0.6, ds=0.001, 
                  poisson_rate=1, moneyness_mean=1.0, moneyness_std=0.0, ttms=None, 
                  num_conts_to_add = -1, contract_size = 100,
                  action_low=0, action_high=3, kappa = 0.0, svj_rho = -0.1, mu_s=0.2, sigma_sq_s=0.1, lambda_d=0.2, 
-                 gbm = False, sabr=False, feed_data=False, day_freq=7):
+                 fx_vol_roll = 10, fx_frq = 24,
+                 gbm = False, sabr=False, feed_data=False, feed_data_fx=False):
         if ttms is None:
             # ttms = [60, 120, 240, 480]
             ttms = [120]   # single ttm
@@ -48,15 +49,15 @@ class Utils:
         self.q = q
         # Annual Trading Day
         self.T = t
-        # frequency of trading
+        # frequency of trading (i.e. frq=2 means trading twice a day)
         self.frq = frq
-        self.dt = self.frq / self.T
+        self.dt = 1 / self.frq / self.T
         # Number of simulations
         self.num_sim = num_sim
         # Initial time to maturity
         self.init_ttm = init_ttm
         # Number of periods
-        self.num_period = int(self.init_ttm / self.frq)
+        self.num_period = int(self.init_ttm * self.frq)
         # Time to maturity for hedging options
         self.hed_ttm = hed_ttm
         # Add Option Moneyness mean, std
@@ -83,8 +84,12 @@ class Utils:
         self.sabr = sabr
         # Feed real data into trained model for evaluation
         self.feed_data = feed_data
-        self.day_freq = day_freq
 
+        # FX data
+        self.feed_data_fx = feed_data_fx
+        self.fx_vol_roll = fx_vol_roll # rolling historical vol size (in days)
+        self.fx_frq = fx_frq # daily hedging times
+        
         # set the np random seed
         np.random.seed(np_seed)
         self.seed = np_seed
@@ -240,7 +245,7 @@ class Utils:
         a_price, sabr_vol = self._sabr_sim()
 
         # time to maturity "rank 1" array: e.g. [M, M-1, ..., 0]
-        ttm = np.arange(self.init_ttm, -self.frq, -self.frq, dtype=np.int16)
+        ttm = np.arange(self.init_ttm, -1/self.frq, -1/self.frq, dtype=float)
 
         # BS price 2-d array and bs delta 2-d array
         print("Generating implied vol")
@@ -251,12 +256,14 @@ class Utils:
         self.implied_vol = implied_vol
         return a_price, implied_vol
 
-    def get_real_path(self, day_freq=7):
+    def get_real_path(self):
         market_price = pd.read_excel('environment/data/SPX_index.xlsx')
+        market_price = market_price[(market_price['Date'].dt.time >= pd.to_datetime('09:00').time()) & 
+                                (market_price['Date'].dt.time <= pd.to_datetime('15:00').time())]
 
         market_vol = pd.read_excel('environment/data/VIX_index.xlsx')
         market_vol = market_vol[(market_vol['Date'].dt.time >= pd.to_datetime('09:00').time()) & 
-                                (market_vol['Date'].dt.time <= pd.to_datetime('16:00').time())]
+                                (market_vol['Date'].dt.time <= pd.to_datetime('15:00').time())]
         
         market_price['Date'] = pd.to_datetime(market_price['Date'])
         market_vol['Date'] = pd.to_datetime(market_vol['Date'])
@@ -265,24 +272,56 @@ class Utils:
         market_vol['Date'] = market_vol['Date'].dt.strftime('%Y-%m-%d %H')
 
         merged_df = market_price[['Date','Close']].merge(market_vol[['Date', 'Close']], on='Date', suffixes=('_price','_vol'))
+        merged_df = np.array(merged_df[['Close_price', 'Close_vol']].T)
         merged_df = merged_df.sort_values('Date')
 
-        result_arrays = []
-        window_size = 30*7 # trading hour 9-15, 7 hours
-        step = int(7/day_freq) # daily hedging times = step
+        window_size = self.init_ttm * 6  # 6 real data per day
+        step_size = int(6 / self.frq)
+        self.num_sim = merged_df.shape[1] - window_size + 1   
 
+        rolled_data = []
+        for i in range(self.num_sim):
+            window_data = merged_df[:, i:i+window_size:step_size]
+            rolled_data.append(window_data)
+        
+        rolled_data_array = np.array(rolled_data)
+        a_price = rolled_data_array[:, 0, :]
+        implied_vol = rolled_data_array[:, 1, :] / 100
+
+        return a_price, implied_vol
+    
+    def get_real_path_fx(self):
+        market_price = pd.read_excel('environment/data/EURUSD.xlsx')
+        
+        market_price['Date'] = pd.to_datetime(market_price['Date'])
+        market_price['Date'] = market_price['Date'].dt.strftime('%Y-%m-%d %H')
+        market_price = market_price.sort_values('Date')
+        
+        # 24 trading hours
+        window_size = self.init_ttm * 24
+        step_size = int(24 / self.fx_frq)
+        
+        market_realized_vol = market_price['Close'].rolling(window=self.fx_vol_roll*24).std()
+        market_realized_vol = pd.DataFrame(market_realized_vol)
+        market_realized_vol = market_realized_vol.rename(columns={'Close':'Close_vol'})
+        market_realized_vol.index = market_price['Date'] 
+        
+        merged_df = pd.merge(market_price[['Date','Close']], market_realized_vol, left_on='Date', right_index=True)
+        merged_df = merged_df.dropna(how='any')
+        merged_df = merged_df.rename(columns={'Close':'Close_price'})
+        
+        result_arrays = []
         for start in range(len(merged_df) - window_size + 1):
             window = merged_df.iloc[start:start + window_size, 1:] 
-            sub_window = window[::step]
+            sub_window = window[::step_size]
             result_arrays.append(sub_window.values)  
         
         result_matrix = np.array(result_arrays)
 
         a_price = result_matrix[:, :, 0]  
         implied_vol = result_matrix[:, :, 1] / 100
-
         return a_price, implied_vol
-
+    
     def init_env(self):
         """Initialize environment
         Entrypoint to simulate market dynamics: 
@@ -298,6 +337,8 @@ class Utils:
         """
         if self.feed_data:
             return self.get_real_path()
+        elif self.feed_data_fx:
+            return self.get_real_path_fx()
         elif self.sabr:
             return self.get_sim_path_sabr()
         elif self.gbm:
