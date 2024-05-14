@@ -25,7 +25,7 @@ random.seed(1)
 
 class Utils:
     def __init__(self, init_ttm, np_seed, num_sim, mu=0.0, init_vol=0.2, 
-                 s=4500, k=4500, r=0, q=0, t=252, frq=1, spread=0,
+                 s=10, k=10, r=0, q=0, t=252, frq=1, spread=0,
                  hed_ttm=60, beta=1, rho=-0.7, volvol=0.6, ds=0.001, 
                  poisson_rate=1, moneyness_mean=1.0, moneyness_std=0.0, ttms=None, 
                  num_conts_to_add = -1, contract_size = 100,
