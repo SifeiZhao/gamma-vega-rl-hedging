@@ -31,9 +31,7 @@ flags.DEFINE_string('logger_prefix', '', 'Prefix folder for logger (Default None
 flags.DEFINE_boolean('vega_obs', False, 'Include portfolio vega and hedging option vega in state variables (Default False)')
 flags.DEFINE_boolean('gbm', False, 'GBM (Default False)')
 flags.DEFINE_boolean('sabr', False, 'SABR (Default False)')
-flags.DEFINE_integer('hed_frq', 1, 'Hedging frequency (Default 1): i.e. hed_frq=2 means hedging twice a day')
 flags.DEFINE_boolean('feed_data', False, 'Feed real SPX data into trained model for evaluation (Default False)')
-flags.DEFINE_boolean('feed_data_fx', False, 'Feed real fx data into trained model for evaluation (Default False)')
 
 def make_logger(work_folder, label, terminal=False):
     loggers = [
@@ -60,16 +58,14 @@ def make_environment(utils, logger = None) -> dm_env.Environment:
 
 def main(argv):
     gamma_hedge_ratio = 1.0
+    work_folder = f'greekhedge_spread={FLAGS.spread}_v={FLAGS.vov}_hedttm={FLAGS.hed_ttm}'
     if FLAGS.feed_data:
-        work_folder = f'greekhedge_spread={FLAGS.spread}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}_feeddata={FLAGS.feed_data}'
-    if FLAGS.feed_data_fx:
-        work_folder = f'greekhedge_spread={FLAGS.spread}_v={FLAGS.vov}_liabttms={FLAGS.liab_ttms}_hedttm={FLAGS.hed_ttm}_hedfrq={FLAGS.hed_frq}_feeddatafx={FLAGS.feed_data_fx}'
+        work_folder = f'greekhedge_spread={FLAGS.spread}_v={FLAGS.vov}_hedttm={FLAGS.hed_ttm}_feeddata={FLAGS.feed_data}'
     if FLAGS.logger_prefix:
         work_folder = FLAGS.logger_prefix + "/" + work_folder
     # Create an environment, grab the spec, and use it to create networks.
-    eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=4321, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, 
-                       sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
-                       frq=FLAGS.hed_frq, feed_data=FLAGS.feed_data, fx_frq=FLAGS.hed_frq, feed_data_fx=FLAGS.feed_data_fx,
+    eval_utils = Utils(init_ttm=FLAGS.init_ttm, np_seed=4321, num_sim=FLAGS.eval_sim, spread=FLAGS.spread, volvol=FLAGS.vov, sabr=FLAGS.sabr, gbm=FLAGS.gbm, hed_ttm=FLAGS.hed_ttm,
+                       feed_data=FLAGS.feed_data,
                        init_vol=FLAGS.init_vol, poisson_rate=FLAGS.poisson_rate, 
                        moneyness_mean=FLAGS.moneyness_mean, moneyness_std=FLAGS.moneyness_std, 
                        mu=FLAGS.mu, ttms=[int(ttm) for ttm in FLAGS.liab_ttms])
@@ -80,22 +76,22 @@ def main(argv):
         eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder, f'eval_gamma_env'))
         eval_actor = GammaHedgeAgent(eval_env, gamma_hedge_ratio)
         eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=make_logger(work_folder, f'eval_gamma_loop',True))
-        
+        # eval_loop.run(num_episodes=5_000)
     elif FLAGS.strategy == 'delta':
         # delta hedging
         eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder, 'eval_delta_env'))
         eval_actor = DeltaHedgeAgent(eval_env, gamma_hedge_ratio)
         eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=make_logger(work_folder, 'eval_delta_loop', True))
-        
+        # eval_loop.run(num_episodes=5_000)
     elif FLAGS.strategy == 'vega':
         # vega hedging
         eval_env = make_environment(utils=eval_utils, logger=make_logger(work_folder, 'eval_vega_env'))
         eval_actor = VegaHedgeAgent(eval_env)
         eval_loop = acme.EnvironmentLoop(eval_env, eval_actor, label='eval_loop', logger=make_logger(work_folder, 'eval_vega_loop', True))
-
-    if FLAGS.feed_data or FLAGS.feed_data_fx:
+        # eval_loop.run(num_episodes=5_000)
+    if (FLAGS.feed_data):
         eval_loop.run(num_episodes=eval_utils.num_sim)   # the number of paths when feed_data=True
-    elif (not FLAGS.feed_data) and (not FLAGS.feed_data_fx):
+    elif (not FLAGS.feed_data):
         eval_loop.run(num_episodes=FLAGS.eval_sim)
 
     Path(f'./logs/{work_folder}/ok').touch()
